@@ -2,7 +2,6 @@ package ChamHash
 
 import (
 	"crypto/sha256"
-	"crypto/rand"
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/common"
 	"github.com/hyperledger/fabric-protos-go/peer"
@@ -88,16 +87,10 @@ func BytesChamHashFromBytes(longbytes []byte) []byte {
 }
 
 func MockBytesChamHash(sha256Hash []byte) []byte {
-	h := make([]byte,SECURITY_PARAMETER)
-	r := make([]byte,SECURITY_PARAMETER)
-	e := make([]byte,SECURITY_PARAMETER*2)
-	rand.Read(h)
-	rand.Read(r)
-	rand.Read(e)
 	chamhx := common.Chamhash{
-		HashValue:            h,
-		RandomValue:          r,
-		Etdcipher:            e,
+		HashValue:            []byte("123"),
+		RandomValue:          []byte("235"),
+		Etdcipher:            []byte("324"),
 	}
 	b,err := proto.Marshal(&chamhx)
 	if err != nil{
