@@ -9,6 +9,7 @@ package endorser
 import (
 	"context"
 	"fmt"
+	"github.com/hyperledger/fabric/ChamHash"
 	"strconv"
 	"time"
 
@@ -408,6 +409,9 @@ func (e *Endorser) ProcessProposalSuccessfullyOrError(up *UnpackedProposal) (*pb
 		Name:    up.ChaincodeName,
 		Version: cdLedger.Version,
 	})
+
+	filledPrpBytes, prphash := ChamHash.FillPrpStructureWithChamHash(prpBytes)
+
 	if err != nil {
 		logger.Warning("Failed marshaling the proposal response payload to bytes", err)
 		return nil, errors.WithMessage(err, "failed to create the proposal response")
@@ -446,7 +450,7 @@ func (e *Endorser) ProcessProposalSuccessfullyOrError(up *UnpackedProposal) (*pb
 	logger.Debugf("escc for chaincode %s is %s", up.ChaincodeName, escc)
 
 	// Note, mPrpBytes is the same as prpBytes by default endorsement plugin, but others could change it.
-	endorsement, mPrpBytes, err := e.Support.EndorseWithPlugin(escc, up.ChannelID(), prpBytes, up.SignedProposal)
+	endorsement, _, err := e.Support.EndorseWithPlugin(escc, up.ChannelID(), prphash, up.SignedProposal)
 	if err != nil {
 		meterLabels = append(meterLabels, "chaincodeerror", strconv.FormatBool(false))
 		e.Metrics.EndorsementsFailed.With(meterLabels...).Add(1)
@@ -456,7 +460,7 @@ func (e *Endorser) ProcessProposalSuccessfullyOrError(up *UnpackedProposal) (*pb
 	return &pb.ProposalResponse{
 		Version:     1,
 		Endorsement: endorsement,
-		Payload:     mPrpBytes,
+		Payload:     filledPrpBytes,
 		Response:    res,
 	}, nil
 }

@@ -8,6 +8,7 @@ package v20
 
 import (
 	"fmt"
+	"github.com/hyperledger/fabric/ChamHash"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -165,9 +166,12 @@ func (vscc *Validator) extractValidationArtifacts(
 		return nil, err
 	}
 
+	prePrpBytes := cap.Action.ProposalResponsePayload
+	prphash := ChamHash.GetHashOfPrpStructure(prePrpBytes)
+
 	return &validationArtifacts{
 		rwset:        respPayload.Results,
-		prp:          cap.Action.ProposalResponsePayload,
+		prp:          prphash,
 		endorsements: cap.Action.Endorsements,
 		chdr:         chdr,
 		env:          env,
