@@ -9,6 +9,7 @@ package protoutil
 import (
 	"bytes"
 	"fmt"
+	"github.com/hyperledger/fabric/ChamHash"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -74,9 +75,30 @@ func EnvelopeAsSignedData(env *common.Envelope) ([]*SignedData, error) {
 		return nil, fmt.Errorf("GetSignatureHeaderFromBytes failed, err %s", err)
 	}
 
-	return []*SignedData{{
-		Data:      env.Payload,
-		Identity:  shdr.Creator,
-		Signature: env.Signature,
-	}}, nil
+	chdr := &common.ChannelHeader{}
+	err = proto.Unmarshal(payload.Header.ChannelHeader, chdr)
+
+	if err !=nil {
+		return nil, fmt.Errorf("GetChannelHeaderFromBytes failed, err #{err}")
+	}
+
+	if common.HeaderType(chdr.Type) == common.HeaderType_ENDORSER_TRANSACTION{
+		//check valid of signedData
+		ChamHash.CheckFilledPayload(env.Payload)
+		//make Data to be hash(Payloadwithnilhash)
+		chash := ChamHash.GetHashOfPayloadStructure(env.Payload)
+		return []*SignedData{{
+			Data:      chash,
+			Identity:  shdr.Creator,
+			Signature: env.Signature,
+		}}, nil
+
+	}else{
+		return []*SignedData{{
+			Data:      env.Payload,
+			Identity:  shdr.Creator,
+			Signature: env.Signature,
+		}}, nil
+	}
+
 }

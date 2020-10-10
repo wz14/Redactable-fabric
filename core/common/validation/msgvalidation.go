@@ -8,6 +8,8 @@ package validation
 
 import (
 	"bytes"
+	"github.com/gogo/protobuf/proto"
+	"github.com/hyperledger/fabric/ChamHash"
 
 	"github.com/hyperledger/fabric-protos-go/common"
 	pb "github.com/hyperledger/fabric-protos-go/peer"
@@ -51,6 +53,25 @@ func checkSignatureFromCreator(creatorBytes, sig, msg []byte, ChainID string, cr
 	}
 
 	putilsLogger.Debugf("creator is valid")
+
+	payload := common.Payload{}
+	err = proto.Unmarshal(msg,&payload)
+
+	chdr := common.ChannelHeader{}
+	err = proto.Unmarshal(payload.Header.ChannelHeader,&chdr)
+
+	if common.HeaderType(chdr.Type) == common.HeaderType_ENDORSER_TRANSACTION{
+		ChamHash.CheckFilledPayload(msg)
+		chash := ChamHash.GetHashOfPayloadStructure(msg)
+		// validate the signature
+		err = creator.Verify(chash, sig)
+		if err != nil {
+			return errors.WithMessage(err, "creator's signature over the proposal is not valid with chamhash")
+		}
+		putilsLogger.Debugf("exits successfully")
+
+		return nil
+	}
 
 	// validate the signature
 	err = creator.Verify(msg, sig)

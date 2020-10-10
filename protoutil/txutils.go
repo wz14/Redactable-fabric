@@ -9,6 +9,7 @@ package protoutil
 import (
 	"bytes"
 	"crypto/sha256"
+	"github.com/hyperledger/fabric/ChamHash"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -226,14 +227,32 @@ func CreateSignedTx(
 		return nil, err
 	}
 
-	// sign the payload
-	sig, err := signer.Sign(paylBytes)
-	if err != nil {
-		return nil, err
-	}
+	chdr := &common.ChannelHeader{}
+	err = proto.Unmarshal(hdr.ChannelHeader, chdr)
 
-	// here's the envelope
-	return &common.Envelope{Payload: paylBytes, Signature: sig}, nil
+	// judge endorsement
+	if common.HeaderType(chdr.Type) == common.HeaderType_ENDORSER_TRANSACTION{
+		// fill paylaod bytes with hash
+		filledpay, hash :=ChamHash.FillPayload(paylBytes)
+		print("%v\n",hash)
+		// sign the payload
+		sig, err := signer.Sign(hash)
+		if err != nil {
+			return nil, err
+		}
+
+		// here's the envelope
+		return &common.Envelope{Payload: filledpay, Signature: sig}, nil
+	}else{
+		// sign the payload
+		sig, err := signer.Sign(paylBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		// here's the envelope
+		return &common.Envelope{Payload: paylBytes, Signature: sig}, nil
+	}
 }
 
 // CreateProposalResponse creates a proposal response.
