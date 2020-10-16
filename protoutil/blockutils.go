@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package protoutil
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/asn1"
+	"github.com/hyperledger/fabric/ChamHash"
 	"math/big"
 
 	"github.com/golang/protobuf/proto"
@@ -63,7 +63,23 @@ func BlockHeaderHash(b *cb.BlockHeader) []byte {
 }
 
 func BlockDataHash(b *cb.BlockData) []byte {
-	sum := sha256.Sum256(bytes.Join(b.Data, nil))
+	s2 := sha256.New()
+	for _,env := range b.Data {
+		tx := cb.Envelope{}
+		_ = proto.Unmarshal(env, &tx)
+		payload := cb.Payload{}
+		_ = proto.Unmarshal(tx.Payload,&payload)
+		PayloadHash := ChamHash.HashValueFromChamHashBytes(payload.Chamhash)
+		//0.payload_hash
+		//1.payload.Header.ChannelHeader
+		//2.payload.Header.SignatureHeader
+		//3.env_sig
+		s2.Write(PayloadHash)
+		s2.Write(payload.Header.ChannelHeader)
+		s2.Write(payload.Header.SignatureHeader)
+		s2.Write(tx.Signature)
+	}
+	sum := sha256.Sum256(nil)
 	return sum[:]
 }
 

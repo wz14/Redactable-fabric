@@ -59,6 +59,9 @@ func BytesChamHashFromSHA256(sha256Hash []byte) []byte {
 }
 
 func HashValueFromChamHashBytes(chamHashBytes []byte) []byte {
+	if chamHashBytes== nil {
+		return nil
+	}
 	chamhash := common.Chamhash{}
 	err := proto.Unmarshal(chamHashBytes,&chamhash)
 	if err != nil {
