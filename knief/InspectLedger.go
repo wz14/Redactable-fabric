@@ -11,20 +11,80 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("fetchBlock")
+var logger = flogging.MustGetLogger("InspectLedger")
 var DataLoc = "./production/orderer"
 var ChannelName = "mychannel"
 // fetch block from dir
 
+func ExtractEnvelopesFromBlock(block *common.Block) (*[]common.Envelope, uint64, error){
+	number := len(block.Data.Data)
+	txs := make([]common.Envelope,number)
+	for i:=0;i<number;i++{
+		err := proto.Unmarshal(block.Data.Data[i],&txs[i])
+		if err != nil{
+			return nil, 0, errors.WithMessage(err,"error in parsing the envelop in block")
+		}
+	}
+	return &txs, uint64(number), nil
+}
+
+func ExtractEnvelope(block *common.Block, index int) (*common.Envelope, error) {
+	if block.Data == nil {
+		return nil, errors.New("block data is nil")
+	}
+
+	envelopeCount := len(block.Data.Data)
+	if index < 0 || index >= envelopeCount {
+		return nil, errors.New("envelope index out of bounds")
+	}
+	marshaledEnvelope := block.Data.Data[index]
+	envelope, err := GetEnvelopeFromBlock(marshaledEnvelope)
+	if err != nil{
+		err = errors.WithMessagef(err, "block data does not carry an envelope at index %d", index)
+		return nil, err
+	}
+	return envelope, nil
+}
+
+func GetEnvelopeFromBlock(data []byte) (*common.Envelope, error) {
+	// Block always begins with an envelope
+	var err error
+	env := &common.Envelope{}
+	if err = proto.Unmarshal(data, env); err != nil {
+		return nil, errors.Wrap(err, "error unmarshaling Envelope")
+	}
+
+	return env, nil
+}
+
+// helper function
+func ExtractHeaderFromBlock(block *common.Block) (*common.BlockHeader, error){
+	return block.Header, nil
+}
+
+func ExtractDataFromBlock(block *common.Block) (*common.BlockData, error){
+	return block.Data, nil
+}
+
+func ExtractMetaDataFromBlock(block *common.Block) (*common.BlockMetadata, error){
+	return block.Metadata, nil
+}
+
 func GetLedgerHeight(fac blockledger.Factory) uint64{
-	rw,_ := fac.GetOrCreate(ChannelName)
+	rw, err := fac.GetOrCreate(ChannelName)
+	if err != nil{
+		logger.Info("factory get channel manager fail")
+	}
 	h := rw.Height()
 	logger.Info("getLedgerHeight:",h)
 	return h
 }
 
 func GetBlockFromNumber(fac blockledger.Factory, num uint64) (*common.Block, error){
-	rw,_ := fac.GetOrCreate(ChannelName)
+	rw, err:= fac.GetOrCreate(ChannelName)
+	if err != nil{
+		logger.Info("factory get channel manager fail")
+	}
 	h := rw.Height()
 	if h < num {
 		return nil, errors.New("getBlock Num is higher than height of ledger")
@@ -54,12 +114,18 @@ func GetFactory() (blockledger.Factory, string, error){
 }
 
 func SerializeBlock(block *common.Block) ([]byte, error) {
-	blockbytes, _ := proto.Marshal(block)
+	blockbytes, err := proto.Marshal(block)
+	if err != nil{
+		return nil, err
+	}
 	return blockbytes, nil
 }
 
-func DeserializeBlock(blk []byte) (*common.Block){
+func DeserializeBlock(blk []byte) (*common.Block, error){
 	b := common.Block{}
-	proto.Unmarshal(blk, &b)
-	return &b
+	err := proto.Unmarshal(blk, &b)
+	if err != nil{
+		return nil, err
+	}
+	return &b, nil
 }
