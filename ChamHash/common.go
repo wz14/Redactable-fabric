@@ -2,19 +2,23 @@ package ChamHash
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/common"
+	"github.com/hyperledger/fabric/common/flogging"
 	"net"
 )
 
+var logger = flogging.MustGetLogger("ChamHash")
+
 type ChamHash struct {
-	Hashvalue            []byte
-	Randomvalue          []byte
-	Etdcipher            []byte
+	Hashvalue   []byte
+	Randomvalue []byte
+	Etdcipher   []byte
 }
 
 const SECURITY_PARAMETER int = 1024
-const CIPHER_HOST = "127.0.0.1:1234"
+const CIPHER_HOST = "192.168.0.2:1234"
 
 type ChamPublicKey struct {
 	publicKey [SECURITY_PARAMETER]byte
@@ -31,19 +35,19 @@ func BytesChamHashFromBytes(longbytes []byte) []byte {
 	s := sha256.New()
 	s.Write(longbytes)
 	sha2value := s.Sum(nil)
-	return MockBytesChamHash(sha2value)
-	//return BytesChamHashFromSHA256(sha2value)
+	//return MockBytesChamHash(sha2value)
+	return BytesChamHashFromSHA256(sha2value)
 }
 
 func MockBytesChamHash(sha256Hash []byte) []byte {
 	chamhx := common.Chamhash{
-		HashValue:            []byte("123"),
-		RandomValue:          []byte("235"),
-		Etdcipher:            []byte("324"),
+		HashValue:   []byte("123"),
+		RandomValue: []byte("235"),
+		Etdcipher:   []byte("324"),
 	}
-	b,err := proto.Marshal(&chamhx)
-	if err != nil{
-		print("chamhash from sha256 fail!")
+	b, err := proto.Marshal(&chamhx)
+	if err != nil {
+		logger.Infof("chamhash from sha256 fail!")
 	}
 	return b
 
@@ -51,55 +55,57 @@ func MockBytesChamHash(sha256Hash []byte) []byte {
 
 func BytesChamHashFromSHA256(sha256Hash []byte) []byte {
 	chamhx := ChamHashHash(sha256Hash)
-	b,err := proto.Marshal(&chamhx)
-	if err != nil{
-		print("chamhash from sha256 fail!")
+	b, err := proto.Marshal(&chamhx)
+	if err != nil {
+		logger.Info("chamhash from sha256 fail!")
 	}
 	return b
 }
 
 func HashValueFromChamHashBytes(chamHashBytes []byte) []byte {
-	if chamHashBytes== nil {
+	if chamHashBytes == nil {
 		return nil
 	}
 	chamhash := common.Chamhash{}
-	err := proto.Unmarshal(chamHashBytes,&chamhash)
+	err := proto.Unmarshal(chamHashBytes, &chamhash)
 	if err != nil {
-		print("hash value from cham hash fail!")
+		logger.Info("hash value from cham hash fail!")
 	}
 	return chamhash.GetHashValue()
 }
 
 // this function change chamhash while message changes, but chamhash.Hashvalue is fixed.
-func ChangeChamHash(m1 []byte, m2 []byte, OldChamHash []byte)([]byte){
+func ChangeChamHash(m1 []byte, m2 []byte, OldChamHash []byte) []byte {
 	return []byte("")
 }
 
 // return (private_key, public_key)
-func ChamHashKeyGen()(ChamPrivateKey, ChamPublicKey) {
-	return ChamPrivateKey{},ChamPublicKey{}
+func ChamHashKeyGen() (ChamPrivateKey, ChamPublicKey) {
+	return ChamPrivateKey{}, ChamPublicKey{}
 }
 
 // return (ChamHash(hashValue,randomValue,Etdcipher))
-func ChamHashHash(message []byte) (common.Chamhash){
+func ChamHashHash(message []byte) common.Chamhash {
 	conn, err := net.Dial("tcp", CIPHER_HOST)
-	if err != nil{
-		print("bad network")
+	if err != nil {
+		logger.Infof("can't connect %s: %s", CIPHER_HOST, err)
+		logger.Infof("hashed message: ", hex.EncodeToString(message))
 	}
+	logger.Infof("success to connect %s", CIPHER_HOST)
 	defer conn.Close()
 	conn.Write(message)
 	buf := make([]byte, SECURITY_PARAMETER*10)
-	count,err := conn.Read(buf)
-	if err != nil{
-		print("bad network")
+	count, err := conn.Read(buf)
+	if err != nil {
+		logger.Info("fail to read message from ", CIPHER_HOST)
 	}
-	if count<4*SECURITY_PARAMETER{
-		print("bad communication")
+	if count < 4*SECURITY_PARAMETER {
+		logger.Info("bad formed message from ", CIPHER_HOST)
 	}
 	c := common.Chamhash{
-		HashValue:            buf[:SECURITY_PARAMETER],
-		RandomValue:          buf[SECURITY_PARAMETER : SECURITY_PARAMETER*2],
-		Etdcipher:            buf[SECURITY_PARAMETER*2:SECURITY_PARAMETER*4],
+		HashValue:   buf[:SECURITY_PARAMETER],
+		RandomValue: buf[SECURITY_PARAMETER : SECURITY_PARAMETER*2],
+		Etdcipher:   buf[SECURITY_PARAMETER*2 : SECURITY_PARAMETER*4],
 	}
 	return c
 }
@@ -108,11 +114,11 @@ func ChamHashCheck(message []byte, hash []byte) bool {
 	return true
 }
 
-func ChamHashAdapt(privatekey ChamPrivateKey, m1 []byte, m2 []byte, hash common.Chamhash) (common.Chamhash){
+func ChamHashAdapt(privatekey ChamPrivateKey, m1 []byte, m2 []byte, hash common.Chamhash) common.Chamhash {
 	return common.Chamhash{}
 }
 
-func GetHashFromChamHash(hash common.Chamhash)([]byte){
+func GetHashFromChamHash(hash common.Chamhash) []byte {
 	return []byte("")
 }
 
