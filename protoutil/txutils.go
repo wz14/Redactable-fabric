@@ -181,7 +181,8 @@ func CreateSignedTx(
 			continue
 		}
 
-		if !bytes.Equal(a1, r.Payload) {
+		//if !bytes.Equal(a1, r.Payload) {
+		if result, _ := ChamHash.EqualProposalResponsePayload(a1, r.Payload); !result {
 			return nil, errors.New("ProposalResponsePayloads do not match")
 		}
 	}
@@ -231,10 +232,10 @@ func CreateSignedTx(
 	err = proto.Unmarshal(hdr.ChannelHeader, chdr)
 
 	// judge endorsement
-	if common.HeaderType(chdr.Type) == common.HeaderType_ENDORSER_TRANSACTION{
+	if common.HeaderType(chdr.Type) == common.HeaderType_ENDORSER_TRANSACTION {
 		// fill paylaod bytes with hash
-		filledpay, hash :=ChamHash.FillPayload(paylBytes)
-		print("%v\n",hash)
+		filledpay, hash := ChamHash.FillPayload(paylBytes)
+		print("%v\n", hash)
 		// sign the payload
 		sig, err := signer.Sign(hash)
 		if err != nil {
@@ -243,7 +244,7 @@ func CreateSignedTx(
 
 		// here's the envelope
 		return &common.Envelope{Payload: filledpay, Signature: sig}, nil
-	}else{
+	} else {
 		// sign the payload
 		sig, err := signer.Sign(paylBytes)
 		if err != nil {
