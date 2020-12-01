@@ -17,15 +17,15 @@ type ChamHash struct {
 	Etdcipher   []byte
 }
 
-const SECURITY_PARAMETER int = 1024
-const CIPHER_HOST = "192.168.0.2:1234"
+const SecurityParameter int = 1024
+const CipherHost = "192.168.0.2:1234"
 
 type ChamPublicKey struct {
-	publicKey [SECURITY_PARAMETER]byte
+	publicKey [SecurityParameter]byte
 }
 
 type ChamPrivateKey struct {
-	privateKey [SECURITY_PARAMETER]byte
+	privateKey [SecurityParameter]byte
 }
 
 // this function receive prpbytes without field in chamhash,
@@ -86,26 +86,26 @@ func ChamHashKeyGen() (ChamPrivateKey, ChamPublicKey) {
 
 // return (ChamHash(hashValue,randomValue,Etdcipher))
 func ChamHashHash(message []byte) common.Chamhash {
-	conn, err := net.Dial("tcp", CIPHER_HOST)
+	conn, err := net.Dial("tcp", CipherHost)
 	if err != nil {
-		logger.Infof("can't connect %s: %s", CIPHER_HOST, err)
+		logger.Infof("can't connect %s: %s", CipherHost, err)
 		logger.Infof("hashed message: ", hex.EncodeToString(message))
 	}
-	logger.Infof("success to connect %s", CIPHER_HOST)
+	logger.Infof("success to connect %s", CipherHost)
 	defer conn.Close()
 	conn.Write(message)
-	buf := make([]byte, SECURITY_PARAMETER*10)
+	buf := make([]byte, SecurityParameter*10)
 	count, err := conn.Read(buf)
 	if err != nil {
-		logger.Info("fail to read message from ", CIPHER_HOST)
+		logger.Info("fail to read message from ", CipherHost)
 	}
-	if count < 4*SECURITY_PARAMETER {
-		logger.Info("bad formed message from ", CIPHER_HOST)
+	if count < 4*SecurityParameter {
+		logger.Info("bad formed message from ", CipherHost)
 	}
 	c := common.Chamhash{
-		HashValue:   buf[:SECURITY_PARAMETER],
-		RandomValue: buf[SECURITY_PARAMETER : SECURITY_PARAMETER*2],
-		Etdcipher:   buf[SECURITY_PARAMETER*2 : SECURITY_PARAMETER*4],
+		HashValue:   buf[:SecurityParameter],
+		RandomValue: buf[SecurityParameter : SecurityParameter*2],
+		Etdcipher:   buf[SecurityParameter*2 : SecurityParameter*4],
 	}
 	return c
 }
