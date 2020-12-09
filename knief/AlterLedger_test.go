@@ -14,4 +14,5 @@ func TestChangeCarOwner(t *testing.T) {
 	}
 	txbytes, _ := ChangeDevToABC((*txs)[0])
 	block.Data.Data[0] = txbytes
+	fac.Close()
 }

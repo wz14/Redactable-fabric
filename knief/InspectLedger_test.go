@@ -14,6 +14,7 @@ func TestInspectLedger(t *testing.T) {
 	fac, _, _ := GetFactory()
 	testInsepctLedger(fac)
 	testAlterLedger(fac)
+	fac.Close()
 }
 
 func testInsepctLedger(fac blockledger.Factory) {
