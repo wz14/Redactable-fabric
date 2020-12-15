@@ -1,18 +1,54 @@
 package ChamHash
 
 import (
+	"errors"
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/common"
 )
 
-//fill payload with chamhash. return (filledPayloadBytes, hashValueOfPayload)
-func FillPayload(PayloadBytes []byte)([]byte, []byte){
+// while modify the payload, change the chamhash struct content.
+// paylaod.ChamHash and newpayload.ChamHash should be empty.
+func UpdatePaylaod(charmHashBytes []byte, payloadBytes []byte, newpayloadBytes []byte) ([]byte, error) {
 	payload := common.Payload{}
-	proto.Unmarshal(PayloadBytes,&payload)
+	err := proto.Unmarshal(payloadBytes, &payload)
 
-	if payload.Chamhash != nil{
+	if err != nil {
+		return nil, err
+	}
+
+	if payload.Chamhash != nil {
+		return nil, errors.New("payload is not well formed")
+	}
+
+	newpayload := common.Payload{}
+	err = proto.Unmarshal(newpayloadBytes, &newpayload)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if newpayload.Chamhash != nil {
+		return nil, errors.New("nwe payload is not well formed")
+	}
+
+	newCharmHash := ChamHashAdapt(Bytes2Sha256Bytes(payloadBytes), Bytes2Sha256Bytes(newpayloadBytes), charmHashBytes)
+	newpayload.Chamhash = newCharmHash
+	UpdatedPayloadBytes, err := proto.Marshal(&newpayload)
+
+	if err != nil {
+		return nil, err
+	}
+	return UpdatedPayloadBytes, nil
+}
+
+// fill payload with chamhash. return (filledPayloadBytes, hashValueOfPayload)
+func FillPayload(PayloadBytes []byte) ([]byte, []byte) {
+	payload := common.Payload{}
+	proto.Unmarshal(PayloadBytes, &payload)
+
+	if payload.Chamhash != nil {
 		print("exist chamstruct in PaylaodBytes\n")
-		return nil,nil
+		return nil, nil
 	}
 
 	chash := BytesChamHashFromBytes(PayloadBytes)
@@ -21,14 +57,14 @@ func FillPayload(PayloadBytes []byte)([]byte, []byte){
 
 	valuehash := HashValueFromChamHashBytes(chash)
 
-	filledPayloadBytes,_ := proto.Marshal(&payload)
+	filledPayloadBytes, _ := proto.Marshal(&payload)
 
 	return filledPayloadBytes, valuehash
 }
 
 func GetHashOfPayloadStructure(filledPaylaodBytes []byte) []byte {
 	payload := common.Payload{}
-	proto.Unmarshal(filledPaylaodBytes,&payload)
+	proto.Unmarshal(filledPaylaodBytes, &payload)
 
 	if payload.Chamhash == nil {
 		print("chamstruct is not filled in PayloadBytes in gethash\n")
@@ -43,7 +79,7 @@ func GetHashOfPayloadStructure(filledPaylaodBytes []byte) []byte {
 */
 func CheckFilledPayload(filledPayloadBytes []byte) bool {
 	payload := common.Payload{}
-	proto.Unmarshal(filledPayloadBytes,&payload)
+	proto.Unmarshal(filledPayloadBytes, &payload)
 
 	if payload.Chamhash == nil {
 		print("chamstruct is not filled in PayloadBytes in checking\n")
@@ -52,6 +88,6 @@ func CheckFilledPayload(filledPayloadBytes []byte) bool {
 
 	chash := payload.Chamhash
 	payload.Chamhash = nil
-	orginBytes,_ := proto.Marshal(&payload)
-	return ChamHashCheck(orginBytes,chash)
+	orginBytes, _ := proto.Marshal(&payload)
+	return ChamHashCheck(Bytes2Sha256Bytes(orginBytes), chash)
 }

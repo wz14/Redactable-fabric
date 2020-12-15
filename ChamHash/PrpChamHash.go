@@ -1,19 +1,42 @@
 package ChamHash
 
 import (
+	"errors"
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/peer"
 )
 
-// change Proposal response payload, return Changed prpBytes
-func ChangeProposalResponsePayload(prpbytes []byte) []byte {
+// update Proposal response payload, return Changed prpBytes
+func UpdateProposalResponsePayload(prpbytes []byte, newprpbytes []byte, chamhashBytes []byte) ([]byte, error) {
 	Prp := peer.ProposalResponsePayload{}
 	err := proto.Unmarshal(prpbytes, &Prp)
 	if err != nil {
-		logger.Infof("Unmarshal proposal respones payload fail")
+		return nil, err
 	}
+
+	if Prp.ChamHashStruct != nil {
+		return nil, errors.New("chamHash is not empty in prpbytes")
+	}
+
+	newPrp := peer.ProposalResponsePayload{}
+	err = proto.Unmarshal(newprpbytes, &newPrp)
+	if err != nil {
+		return nil, err
+	}
+
+	if newPrp.ChamHashStruct != nil {
+		return nil, errors.New("chamHash is not empty in NewprpBytes")
+	}
+
 	//ChamHashAdapt
-	return nil
+	updateChamHashBytes := ChamHashAdapt(Bytes2Sha256Bytes(prpbytes), Bytes2Sha256Bytes(newprpbytes), chamhashBytes)
+	newPrp.ChamHashStruct = updateChamHashBytes
+
+	updatePrpBytes, err := proto.Marshal(&newPrp)
+	if err != nil {
+		return nil, err
+	}
+	return updatePrpBytes, nil
 }
 
 // equalPayload is to judge p1 and p2 with chamHashStruct in
@@ -71,5 +94,5 @@ func CheckChamHashOfPrpStructure(prpbytes []byte) bool {
 	chash := Prp.ChamHashStruct
 	Prp.ChamHashStruct = nil
 	orginBytes, _ := proto.Marshal(&Prp)
-	return ChamHashCheck(orginBytes, chash)
+	return ChamHashCheck(Bytes2Sha256Bytes(orginBytes), chash)
 }
