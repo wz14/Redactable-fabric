@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+
+enum TransferType{
+  Hash = 0;
+  Check = 1;
+  Adapt = 2;
+  HashRecv = 3;
+  CheckRecv = 4;
+  AdaptRecv = 5;
+}
+
+message Transfer{
+  TransferType ttype = 1;
+  bytes tdata = 2;
+}
+
+message Message{
+  bytes mes = 1;
+}
+
+message ChamHash{
+  string hash = 1;
+  string helperData = 2;
+}
+
+message CheckSet{
+  Message m = 1;
+  ChamHash ch = 2;
+}
+
+message AdaptSet{
+  Message m1 = 1;
+  Message m2 = 2;
+  ChamHash ch = 3;
+}
+
+message CheckState{
+  bool check = 1;
+}
+
+// three type for transfer data from chamServer
+// 1. Hash(m) -> h
+// 2. Check(m,h) -> bool
+// 3. Adapt(m1,m2,h) -> h
+/*********************************/
+// protobuf command:
+// 1.  protoc --python_out=. data.proto
+// 2.  protoc --go_out=. data.proto

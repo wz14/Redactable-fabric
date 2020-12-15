@@ -27,14 +27,18 @@ class MaabeRW15(ABEncMultiAuth):
         ABEncMultiAuth.__init__(self)
         self.group = group
         self.util = SecretUtil(group, verbose)
+    
+    def H(self, x):
+        return self.group.hash(x,G2)
+    
+    def F(self, x):
+        return self.group.hash(x,G2)
 
     def setup(self):
-        g1 = self.group.random(G1)
+        g1 = self.group.random(G1)        
         g2 = self.group.random(G2)
         egg = pair(g1, g2)
-        H = lambda x: self.group.hash(x, G2)
-        F = lambda x: self.group.hash(x, G2)
-        gp = {'g1': g1, 'g2': g2, 'egg': egg, 'H': H, 'F': F}
+        gp = {'g1': g1, 'g2': g2, 'egg': egg}
         if debug:
             print("Setup")
             print(gp)
@@ -87,7 +91,7 @@ class MaabeRW15(ABEncMultiAuth):
         assert sk['name'] == auth, "Attribute %s does not belong to authority %s" % (attribute, sk['name'])
 
         t = self.group.random()
-        K = gp['g2'] ** sk['alpha'] * gp['H'](gid) ** sk['y'] * gp['F'](attribute) ** t
+        K = gp['g2'] ** sk['alpha'] * self.H(gid) ** sk['y'] * self.F(attribute) ** t
         KP = gp['g1'] ** t
         if debug:
             print("Keygen")
@@ -136,7 +140,7 @@ class MaabeRW15(ABEncMultiAuth):
             C1[i] = gp['egg'] ** secret_shares[i] * pks[auth]['egga'] ** tx
             C2[i] = gp['g1'] ** (-tx)
             C3[i] = pks[auth]['gy'] ** tx * gp['g1'] ** zero_shares[i]
-            C4[i] = gp['F'](attr) ** tx
+            C4[i] = self.F(attr) ** tx
         if debug:
             print("Encrypt")
             print(message)
@@ -163,7 +167,7 @@ class MaabeRW15(ABEncMultiAuth):
         for i in range(len(pruned_list)):
             x = pruned_list[i].getAttribute()  # without the underscore
             y = pruned_list[i].getAttributeAndIndex()  # with the underscore
-            B *= (ct['C1'][y] * pair(ct['C2'][y], sk['keys'][x]['K']) * pair(ct['C3'][y], gp['H'](sk['GID'])) * pair(
+            B *= (ct['C1'][y] * pair(ct['C2'][y], sk['keys'][x]['K']) * pair(ct['C3'][y], self.H(sk['GID'])) * pair(
                 sk['keys'][x]['KP'], ct['C4'][y])) ** coefficients[y]
         if debug:
             print("Decrypt")
@@ -185,48 +189,32 @@ def main():
         print("attrs2 =>", attrs2)
         print("Policy =>", access_policy)
 
-    assert groupObj.InitBenchmark(), "failed to init benchmark"
-    groupObj.StartBenchmark(["RealTime"])
     #setup
     public_parameters = maabe.setup()
-    groupObj.EndBenchmark()
-    print("setup time=>", groupObj.GetBenchmark("RealTime"))
 
     #authsetup 2AA
-    groupObj.StartBenchmark(["RealTime"])
     (pk1, sk1) = maabe.authsetup(public_parameters, 'UT')
     (pk2, sk2) = maabe.authsetup(public_parameters, 'OU')
-    groupObj.EndBenchmark()
-    print("authsetup time=>", groupObj.GetBenchmark("RealTime"))
     pk = {'UT': pk1, 'OU':pk2}
 
     #keygen Bob
-    groupObj.StartBenchmark(["RealTime"])
     gid = "bob"
     user_attr1 = ['STUDENT@UT','PHD@UT']
     user_attr2 = ['STUDENT@OU']
     user_sk1 = maabe.multiple_attributes_keygen(public_parameters, sk1, gid, user_attr1)
     user_sk2 = maabe.multiple_attributes_keygen(public_parameters, sk2, gid, user_attr2)
-    groupObj.EndBenchmark()
-    print("keygen time=>", groupObj.GetBenchmark("RealTime"))
     user_sk = {'GID': gid, 'keys':merge_dicts(user_sk1, user_sk2)}
 
     #encrypt
-    groupObj.StartBenchmark(["RealTime"])
     rand_msg = groupObj.random(GT)
     if debug: print("msg =>", rand_msg)
     ct = maabe.encrypt(public_parameters,pk, rand_msg, access_policy)
-    groupObj.EndBenchmark()
-    print("encrypt time=>", groupObj.GetBenchmark("RealTime"))
     if debug: print("\n\nCiphertext...\n")
     groupObj.debug(ct)
     print("ciphertext:=>", ct)
 
     # decrypt
-    groupObj.StartBenchmark(["RealTime"])
     rec_msg = maabe.decrypt(public_parameters, user_sk, ct)
-    groupObj.EndBenchmark()
-    print("decrypt time=>", groupObj.GetBenchmark("RealTime"))
     if debug: print("\n\nDecrypt...\n")
     if debug: print("Rec msg =>", rec_msg)
 
