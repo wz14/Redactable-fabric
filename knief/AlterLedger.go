@@ -2,6 +2,7 @@ package knief
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperledger/fabric-protos-go/common"
@@ -147,6 +148,12 @@ func ChangeDevToABC(tx common.Envelope) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	logger.Infof("old prp bytes len = %d", len(cap.Action.ProposalResponsePayload))
+	ss := []byte("{\"make\":\"Holden\",\"model\":\"Barina\",\"colour\":\"brown\",\"owner\":\"Dve\"}")
+	if bytes.Contains(cap.Action.ProposalResponsePayload, ss) {
+		logger.Infof("proposalResponsePayload====>%s", hex.EncodeToString(cap.Action.ProposalResponsePayload))
+		logger.Infof("greate! the value of car9 is in prp")
+	}
 
 	chamHash := prp.ChamHashStruct
 
@@ -178,7 +185,19 @@ func ChangeDevToABC(tx common.Envelope) ([]byte, error) {
 	}
 
 	cap.ChaincodeProposalPayload = newCPPBytes
-	cap.Action.ProposalResponsePayload = newPrpBytes
+	// change prp bytes to new value of car9
+
+	if bytes.Contains(newPrpBytes, ss) {
+		logger.Infof("greate! the value of car9 is in new prp")
+	}
+	ss2 := []byte("{\"make\":\"Holden\",\"model\":\"Barina\",\"colour\":\"brown\",\"owner\":\"ABC\"}")
+	finalPrpBytes := bytes.ReplaceAll(newPrpBytes, ss, ss2)
+	if bytes.Contains(finalPrpBytes, ss2) {
+		logger.Infof("greate! the value of car9 (ABC version) is in new prp")
+	}
+
+	logger.Infof("new prp bytes len = %d", len(finalPrpBytes))
+	cap.Action.ProposalResponsePayload = finalPrpBytes
 
 	NewCAPBytes, err := proto.Marshal(&cap)
 	if err != nil {
