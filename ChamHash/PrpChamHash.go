@@ -30,13 +30,7 @@ func UpdateProposalResponsePayload(prpbytes []byte, newprpbytes []byte, chamhash
 
 	//ChamHashAdapt
 	updateChamHashBytes := ChamHashAdapt(Bytes2Sha256Bytes(prpbytes), Bytes2Sha256Bytes(newprpbytes), chamhashBytes)
-	newPrp.ChamHashStruct = updateChamHashBytes
-
-	updatePrpBytes, err := proto.Marshal(&newPrp)
-	if err != nil {
-		return nil, err
-	}
-	return updatePrpBytes, nil
+	return updateChamHashBytes, nil
 }
 
 // equalPayload is to judge p1 and p2 with chamHashStruct in

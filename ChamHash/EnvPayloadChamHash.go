@@ -32,13 +32,7 @@ func UpdatePaylaod(charmHashBytes []byte, payloadBytes []byte, newpayloadBytes [
 	}
 
 	newCharmHash := ChamHashAdapt(Bytes2Sha256Bytes(payloadBytes), Bytes2Sha256Bytes(newpayloadBytes), charmHashBytes)
-	newpayload.Chamhash = newCharmHash
-	UpdatedPayloadBytes, err := proto.Marshal(&newpayload)
-
-	if err != nil {
-		return nil, err
-	}
-	return UpdatedPayloadBytes, nil
+	return newCharmHash, nil
 }
 
 // fill payload with chamhash. return (filledPayloadBytes, hashValueOfPayload)
