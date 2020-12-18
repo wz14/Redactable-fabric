@@ -11,7 +11,7 @@ import (
 var logger = flogging.MustGetLogger("ChamHash")
 
 const SecurityParameter int = 1024
-const CipherHost = "192.168.0.2:1234"
+const CipherHost = "auth.example.com:1234"
 
 // this function receive prpbytes without field in chamhash,
 // and return (filled prpbytes, hashvalue in prpbytes for sign)
